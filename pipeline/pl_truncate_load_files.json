@@ -1,0 +1,274 @@
+{
+	"name": "pl_truncate_load_files",
+	"properties": {
+		"activities": [
+			{
+				"name": "Truncate_All_Tables",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[sp_truncate_all_tables]"
+				},
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabase",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "GetMetadata_MASTER_CHILD",
+				"type": "GetMetadata",
+				"dependsOn": [
+					{
+						"activity": "Truncate_All_Tables",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "master_child_source",
+						"type": "DatasetReference",
+						"parameters": {
+							"folderPath": {
+								"value": "raw/mater_child_export/",
+								"type": "Expression"
+							},
+							"fileName": "*"
+						}
+					},
+					"fieldList": [
+						{
+							"value": "childItems",
+							"type": "Expression"
+						}
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "ForEach_master_child",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "GetMetadata_MASTER_CHILD",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('GetMetadata_MASTER_CHILD').output.childItems\n",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Copy data2",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "DelimitedTextSource",
+									"additionalColumns": [
+										{
+											"name": "fileName",
+											"value": {
+												"value": "@pipeline().parameters.fileName",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "Date",
+											"value": {
+												"value": "@concat(substring(split(item().name, '-')[1], 0, 4), '-', substring(split(item().name, '-')[1], 4, 2), '-', substring(split(item().name, '-')[1], 6, 2))",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "DateKey",
+											"value": {
+												"value": "@substring(split(item().name, '-')[1], 0, 8)",
+												"type": "Expression"
+											}
+										}
+									],
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true,
+										"enablePartitionDiscovery": false
+									},
+									"formatSettings": {
+										"type": "DelimitedTextReadSettings"
+									}
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"preCopyScript": {
+										"value": "TRUNCATE TABLE [dbo].[master_child];",
+										"type": "Expression"
+									},
+									"writeBehavior": "insert",
+									"sqlWriterUseTableLock": false,
+									"disableMetricsCollection": false
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "MasterID",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "MasterID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "ChildID",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ChildID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "ChildName",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "ChildName",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "Relation",
+												"type": "String",
+												"physicalType": "String"
+											},
+											"sink": {
+												"name": "Relation",
+												"type": "String",
+												"physicalType": "nvarchar"
+											}
+										},
+										{
+											"source": {
+												"name": "Date",
+												"type": "String"
+											},
+											"sink": {
+												"name": "Date",
+												"type": "DateTime",
+												"physicalType": "date"
+											}
+										},
+										{
+											"source": {
+												"name": "DateKey",
+												"type": "String"
+											},
+											"sink": {
+												"name": "DateKey",
+												"type": "Int32",
+												"physicalType": "int"
+											}
+										}
+									],
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "master_child_source",
+									"type": "DatasetReference",
+									"parameters": {
+										"folderPath": "raw/master_child_export/",
+										"fileName": "@item().name"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "master_child_sink",
+									"type": "DatasetReference"
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"fileName": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"Item": {
+				"type": "Array"
+			},
+			"getmeta": {
+				"type": "String"
+			},
+			"variable1": {
+				"type": "String"
+			},
+			"variable": {
+				"type": "Array"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-07-20T15:22:47Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

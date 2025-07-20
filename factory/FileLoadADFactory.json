@@ -1,0 +1,9 @@
+{
+	"name": "FileLoadADFactory",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "f6fe0f0a-4599-4c76-be57-942ef57a5dc2",
+		"tenantId": "ae99e7d7-c3b3-47fb-9b88-da0308c5d947"
+	}
+}

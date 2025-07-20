@@ -1,0 +1,43 @@
+{
+	"name": "master_child_sink",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AzureSqlDatabase",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "MasterID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ChildID",
+				"type": "nvarchar"
+			},
+			{
+				"name": "ChildName",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Relation",
+				"type": "nvarchar"
+			},
+			{
+				"name": "Date",
+				"type": "date"
+			},
+			{
+				"name": "DateKey",
+				"type": "int",
+				"precision": 10
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "master_child"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
